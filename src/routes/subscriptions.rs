@@ -16,6 +16,16 @@ pub async fn subscribe(
     // Retrieving a connection from the application state! 
     // connection: web::Data<PgConnection>,
 ) -> HttpResponse {
+    // Let's generate a random unique identifier 
+    let request_id = Uuid::new_v4();
+    tracing::info!(
+        "request_id {} - Adding '{}' '{}' as a new subscriber.",
+        request_id, 
+        form.email,
+        form.name
+    );
+
+    tracing::info!("request_id {} - Saving new subscriber details in the database", request_id);
     // `Result` has two variants: `Ok` and `Err`.
     // The first for successes, the second for failures.
     // We use a `match` statement to choose what to do based on the outcome.
@@ -36,9 +46,15 @@ pub async fn subscribe(
     // Using the pool as a drop-in replacement
     .execute(pool.get_ref())
     .await{
-        Ok(_) => HttpResponse::Ok().finish(), 
+        Ok(_) => {
+            tracing::info!("request_id {} - New subscriber details have been saved", request_id);
+            HttpResponse::Ok().finish()
+        }, 
         Err(e) => {
-            println!("Failed to execute query: {}", e);
+            // converting print statement into an error log...and now tracing
+            tracing::error!("request_id {} - Failed to execute query: {:?}", request_id, e);
+            // // Using `println!` to capture information about the error in case things don't work out as expected
+            // println!("Failed to execute query: {}", e);
             HttpResponse::InternalServerError().finish() 
         }
     }

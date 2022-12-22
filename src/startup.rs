@@ -1,5 +1,7 @@
 use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_web::dev::Server;
+use actix_web::web::Data;
+use actix_web::middleware::Logger;
 use std::net::TcpListener;
 use crate::routes::{health_check, subscribe};
 use sqlx::{PgConnection, PgPool};
@@ -15,6 +17,8 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     // capture connection from the surrounding environment
     let server = HttpServer::new( move || {
         App::new()
+            // Middlewares are added using the `wrap` method on `App`
+            .wrap(Logger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             // Register the connection as part of the application state 
