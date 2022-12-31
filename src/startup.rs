@@ -5,6 +5,7 @@ use actix_web::middleware::Logger;
 use std::net::TcpListener;
 use crate::routes::{health_check, subscribe};
 use sqlx::{PgConnection, PgPool};
+use tracing_actix_web::TracingLogger;
 
 pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
 
@@ -17,8 +18,10 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
     // capture connection from the surrounding environment
     let server = HttpServer::new( move || {
         App::new()
-            // Middlewares are added using the `wrap` method on `App`
-            .wrap(Logger::default())
+            // Instead of `Logger::default`
+            .wrap(TracingLogger::default())
+            // // Middlewares are added using the `wrap` method on `App`
+            // .wrap(Logger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
             // Register the connection as part of the application state 

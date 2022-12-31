@@ -1,9 +1,32 @@
 use zero2prod;
 use zero2prod::startup::run;
+use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use std::net::TcpListener;
 use sqlx::{PgConnection, Connection, query, PgPool, Executor};
 use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use uuid::Uuid;
+use once_cell::sync::Lazy;
+use secrecy::ExposeSecret;
+
+// Ensure that the `tracing` stack is only initialised once using `once_cell`
+static TRACING: Lazy<()> = Lazy::new(|| {
+    let default_filter_level = "info".to_string();
+    let subscriber_name = "test".to_string();
+    // We cannot assign the output of `get_subscriber` to a variable based on the 
+    // value TEST_LOG` because the sink is part of the type returned by
+    // `get_subscriber`, therefore they are not the same type. We could work around 
+    // it, but this is the most straight-forward way of moving forward.
+
+    if std::env::var("TEST_LOG").is_ok() {
+        let subscriber = get_subscriber(subscriber_name,default_filter_level, std::io::stdout);
+        init_subscriber(subscriber);
+        } else {
+            let subscriber = get_subscriber(subscriber_name,default_filter_level, std::io::sink);
+            init_subscriber(subscriber);
+        };
+    // OLD VERSION
+    // let subscriber = get_subscriber("test".into(), "debug".into());
+});
 
 #[derive(Debug)]
 pub struct TestApp {
@@ -12,6 +35,14 @@ pub struct TestApp {
 }
 
 async fn spawn_app() -> TestApp {
+
+    // The first time `initialize` is invoked the code in `TRACING` is executed. 
+    // All other invocations will instead skip execution.
+    Lazy::force(&TRACING);
+
+    // MOVED ABOVE WITH static TRACING
+    // let subscriber = get_subscriber("test".into(), "debug".into());
+    // init_subscriber(subscriber);
 
     let listener = TcpListener::bind("127.0.0.1:0").expect("Failed to bind to random port.");
 
@@ -51,7 +82,7 @@ async fn spawn_app() -> TestApp {
 pub async fn configure_database(config: &DatabaseSettings) -> PgPool { 
     // Create database
     let mut connection = PgConnection::connect(
-                &config.connection_string_without_db()
+                &config.connection_string_without_db().expose_secret()
         )
         .await
         .expect("Failed to connect to Postgres");
@@ -62,7 +93,7 @@ pub async fn configure_database(config: &DatabaseSettings) -> PgPool {
 
 
     // Migrate database
-    let connection_pool = PgPool::connect(&config.connection_string()) 
+    let connection_pool = PgPool::connect(&config.connection_string().expose_secret()) 
         .await
         .expect("Failed to connect to Postgres."); 
     
