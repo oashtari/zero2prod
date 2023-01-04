@@ -64,10 +64,12 @@ async fn main() -> std::io::Result<()> {
     // Panic if we can't read configuration
     let configuration = get_configuration().expect("Failed to read configuration."); 
 
-    let connection_pool = PgPoolOptions::new().acquire_timeout(std::time::Duration::from_secs(2)).connect_lazy(&configuration.database.connection_string().expose_secret())
+    let connection_pool = PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy_with(configuration.database.with_db());
         // No longer async, given that we don't actually try to connect!
         // .await
-        .expect("Failed to create Postgres connection pool.");
+        // .expect("Failed to create Postgres connection pool.");
 
     // OLD VERSION w/ PG Connection
     // let connection = PgConnection::connect(&configuration.database.connection_string())
