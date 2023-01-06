@@ -2,7 +2,8 @@ use actix_web::{web, App, HttpResponse, HttpServer, guard::Connect};
 use sqlx::{PgConnection, PgPool};
 use chrono::Utc;
 use uuid::Uuid;
-use tracing::Instrument;
+use tracing::{Instrument, Subscriber};
+use crate::domain::{SubscriberName, NewSubscriber};
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -20,6 +21,14 @@ pub struct FormData {
     )
 )]
 
+#[tracing::instrument(
+    name = "Adding a new subscriber",
+    skip(form, pool),
+    fields(
+        subscriber_email = %form.email,
+        subscriber_name = %form.name
+    )
+)]
 pub async fn subscribe(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>, // renamed
@@ -28,14 +37,32 @@ pub async fn subscribe(
     // connection: web::Data<PgConnection>,
 ) -> HttpResponse {
 
-    match insert_subscriber(&pool, &form).await
+    let name = match SubscriberName::parse(form.0.name) {
+        Ok(name) => name,
+        Err(_) => return HttpResponse::BadRequest().finish(),
+    };
+
+    // BEFORE ADDING TYPE DRIVEN DEVELOPMENT
+    // let subscriber_name = crate::domain::SubscriberName(form.name.clone());
+
+    // `web::Form` is a wrapper around `FormData`
+    // `form.0` gives us access to the underlying `FormData`
+    let new_subscriber = NewSubscriber {
+        email: form.0.email,
+        name
+        // we are declaring 'name' above now instead if inline : SubscriberName::parse(form.0.name).expect("Name validation failed."), 
+    };
+
+    match insert_subscriber(&pool, &new_subscriber).await
     {
         Ok(_) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish() }
+        Err(_) => HttpResponse::InternalServerError().finish() 
     }
+}
+
 #[tracing::instrument(
     name = "Saving new subscriber details in the database", 
-    skip(form, pool)
+    skip(new_subscriber, pool)
     )]
     
     // // ADDED TRACING INSTRUMENT TO GET RID OF QUERY SPAN
@@ -81,7 +108,8 @@ pub async fn subscribe(
 
     pub async fn insert_subscriber(
         pool: &PgPool,
-        form: &FormData,
+        // form: &FormData,
+        new_subscriber: &NewSubscriber,
     ) -> Result<(), sqlx::Error> {
 
     // match -- ELIMINATING THIS AFTER ALL 
@@ -91,8 +119,8 @@ pub async fn subscribe(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        form.email,
-        form.name,
+        new_subscriber.email,
+        new_subscriber.name.as_ref(),
         Utc::now(),
     )
     // We use "get_ref" to get an immutable reference to the `PgConnection`
