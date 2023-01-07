@@ -3,7 +3,8 @@ use sqlx::{PgConnection, PgPool};
 use chrono::Utc;
 use uuid::Uuid;
 use tracing::{Instrument, Subscriber};
-use crate::domain::{SubscriberName, NewSubscriber};
+use crate::domain::{SubscriberName, NewSubscriber, SubscriberEmail};
+// use crate::
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
