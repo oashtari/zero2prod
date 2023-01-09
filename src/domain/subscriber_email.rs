@@ -1,6 +1,7 @@
 use validator::validate_email;
-use fake::faker::internet::en::SafeEmail;
-use fake::Fake;
+// use fake::faker::internet::en::SafeEmail;
+// use fake::faker::internet::en::SafeEmail;
+// use fake::Fake;
 
 #[derive(Debug)]
 pub struct SubscriberEmail(String);
@@ -25,6 +26,8 @@ impl AsRef<str> for SubscriberEmail {
 mod tests {
     use super::SubscriberEmail;
     use claim::assert_err;
+    use fake::faker::internet::en::SafeEmail;
+    use fake::Fake;
 
     #[derive(Debug, Clone)]
     struct ValidEmailFixture(pub String);

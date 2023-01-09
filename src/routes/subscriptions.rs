@@ -12,15 +12,22 @@ pub struct FormData {
     name: String,
 }
 
-#[tracing::instrument(
-    name = "Adding a new subscriber",
-    skip(form, pool),
-    fields(
-        // request_id = %Uuid::new_v4(), // eliminated due to double request IDs showing up
-        subscriber_email = %form.email, 
-        subscriber_name = %form.name
-    )
-)]
+impl TryFrom<FormData> for NewSubscriber {
+    type Error = String;
+
+    fn try_from(value: FormData) -> Result<Self, Self::Error> {
+        let name = SubscriberName::parse(value.name)?;
+        let email = SubscriberEmail::parse(value.email)?;
+        Ok(Self{email, name})
+    }
+}
+
+// REPLACED BY TRY FROM METHOD
+// pub fn parse_subscriber(form: FormData) -> Result<NewSubscriber, String> {
+//     let name = SubscriberName::parse(form.name)?;
+//     let email = SubscriberEmail::parse(form.email)?;
+//     Ok(NewSubscriber { email, name })
+// }
 
 #[tracing::instrument(
     name = "Adding a new subscriber",
@@ -38,20 +45,31 @@ pub async fn subscribe(
     // connection: web::Data<PgConnection>,
 ) -> HttpResponse {
 
-    let name = match SubscriberName::parse(form.0.name) {
-        Ok(name) => name,
-        Err(_) => return HttpResponse::BadRequest().finish(),
-    };
+    // THIS IS NOW ALL DONE ABOVE IN THE parse_subscriber HELPER FUNCTION
+    // let name = match SubscriberName::parse(form.0.name) {
+    //     Ok(name) => name,
+    //     Err(_) => return HttpResponse::BadRequest().finish(),
+    // };
+
+    // let email: SubscriberEmail = match SubscriberEmail::parse(form.0.email) {
+    //     Ok(email) => email,
+    //     Err(_) => return HttpResponse::BadRequest().finish(),
+    // };
 
     // BEFORE ADDING TYPE DRIVEN DEVELOPMENT
     // let subscriber_name = crate::domain::SubscriberName(form.name.clone());
 
     // `web::Form` is a wrapper around `FormData`
     // `form.0` gives us access to the underlying `FormData`
-    let new_subscriber = NewSubscriber {
-        email: form.0.email,
-        name
-        // we are declaring 'name' above now instead if inline : SubscriberName::parse(form.0.name).expect("Name validation failed."), 
+   
+    // BEFORE THE HELPER FUNCTION
+    // let new_subscriber = NewSubscriber { email, name
+    //     // we are declaring 'name' above now instead if inline : SubscriberName::parse(form.0.name).expect("Name validation failed."), 
+    // };
+
+    let new_subscriber = match form.0.try_into() {
+        Ok(form) => form,
+        Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
     match insert_subscriber(&pool, &new_subscriber).await
@@ -60,6 +78,7 @@ pub async fn subscribe(
         Err(_) => HttpResponse::InternalServerError().finish() 
     }
 }
+
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database", 
@@ -120,7 +139,7 @@ pub async fn subscribe(
         VALUES ($1, $2, $3, $4)
         "#,
         Uuid::new_v4(),
-        new_subscriber.email,
+        new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
         Utc::now(),
     )
