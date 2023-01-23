@@ -1,4 +1,4 @@
-use zero2prod;
+use zero2prod::{self, email_client};
 use zero2prod::startup::run;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
 use std::net::TcpListener;
@@ -7,6 +7,7 @@ use zero2prod::configuration::{get_configuration, DatabaseSettings};
 use uuid::Uuid;
 use once_cell::sync::Lazy;
 use secrecy::ExposeSecret;
+use zero2prod::email_client::EmailClient;
 
 // Ensure that the `tracing` stack is only initialised once using `once_cell`
 static TRACING: Lazy<()> = Lazy::new(|| {
@@ -56,6 +57,18 @@ async fn spawn_app() -> TestApp {
     
     let connection_pool = configure_database(&configuration.database).await;
 
+    // Build a new email client
+
+    let sender_email = configuration.email_client.sender()
+        .expect("Invalid sender email address.");
+
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email, 
+        // Pass argument from configuration 
+        configuration.email_client.authorization_token,
+    );
+
     // OLD CODE before wanting to reset the database while testing, to avoid unique email duplication issue
     // let connection_pool = PgPool::connect(
     //         &configuration.database.connection_string()
@@ -63,7 +76,7 @@ async fn spawn_app() -> TestApp {
     //     .await
     //     .expect("Failed to connect to Postgres.");
 
-    let server = run(listener, connection_pool.clone()).expect("Failed to bind address.");
+    let server = run(listener, connection_pool.clone(), email_client).expect("Failed to bind address.");
 
     let _ = tokio::spawn(server);
 

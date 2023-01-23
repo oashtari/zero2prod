@@ -4,6 +4,7 @@ pub mod startup;
 pub mod telemetry;
 // pub mod former_domain;
 pub mod domain;
+pub mod email_client;
 
 use actix_web::{web, App, HttpResponse, HttpServer};
 use actix_web::dev::Server;

@@ -3,7 +3,7 @@ use validator::validate_email;
 // use fake::faker::internet::en::SafeEmail;
 // use fake::Fake;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SubscriberEmail(String);
 
 impl SubscriberEmail {

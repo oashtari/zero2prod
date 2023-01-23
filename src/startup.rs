@@ -6,11 +6,14 @@ use std::net::TcpListener;
 use crate::routes::{health_check, subscribe};
 use sqlx::{PgConnection, PgPool};
 use tracing_actix_web::TracingLogger;
+use crate::email_client::{EmailClient, self};
 
-pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Error> {
+pub fn run(listener: TcpListener, db_pool: PgPool, email_client: EmailClient) -> Result<Server, std::io::Error> {
 
     // Wrap the pool using web::Data, which boils down to an Arc smart pointer 
     let db_pool = web::Data::new(db_pool);
+
+    let email_client = Data::new(email_client);
 
     // OLD VERSION w/ PG connection
     // Wrap the connection in a smart pointer
@@ -27,6 +30,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool) -> Result<Server, std::io::Er
             // Register the connection as part of the application state 
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
+            .app_data(email_client.clone())
     })
     .listen(listener)?
     .run();

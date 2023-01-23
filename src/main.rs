@@ -11,6 +11,7 @@ use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer};
 use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 use tracing_log::LogTracer;
 use secrecy::ExposeSecret;
+use zero2prod::email_client::EmailClient;
 
 /// Compose multiple layers into a `tracing`'s subscriber.
 ///
@@ -71,6 +72,16 @@ async fn main() -> std::io::Result<()> {
         // .await
         // .expect("Failed to create Postgres connection pool.");
 
+    // Build an 'EmailClient' using 'configuration'
+    let sender_email = configuration.email_client.sender()
+        .expect("Invalid sender email address.");
+    let email_client = EmailClient::new(
+        configuration.email_client.base_url,
+        sender_email, 
+        // Pass argument from configuration 
+        configuration.email_client.authorization_token,
+    );
+
     // OLD VERSION w/ PG Connection
     // let connection = PgConnection::connect(&configuration.database.connection_string())
     //     .await
@@ -79,5 +90,5 @@ async fn main() -> std::io::Result<()> {
     // We have removed the hard-coded `8000` - it's now coming from our settings!
     let address = format!("{}:{}", configuration.application.host, configuration.application.port);
     let listener = TcpListener::bind(address)?;
-    run(listener, connection_pool)?.await
+    run(listener, connection_pool, email_client)?.await
 }
