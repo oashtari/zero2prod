@@ -6,9 +6,9 @@ pub mod telemetry;
 pub mod domain;
 pub mod email_client;
 
-use actix_web::{web, App, HttpResponse, HttpServer};
-use actix_web::dev::Server;
-use std::net::TcpListener;
+// use actix_web::{web, App, HttpResponse, HttpServer};
+// use actix_web::dev::Server;
+// use std::net::TcpListener;
 
 // async fn health_check() -> HttpResponse {
 //     HttpResponse::Ok().finish()

@@ -1,16 +1,17 @@
-use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
-use std::fmt::format;
+// use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
+// use std::fmt::format;
 use std::net::TcpListener;
-use zero2prod::startup::run;
+use actix_web::App;
+use zero2prod::startup::{run, Application};
 use zero2prod::configuration::get_configuration;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
-use sqlx::{Connection, PgConnection, PgPool, postgres::PgPoolOptions};
-use env_logger::Env;
-use tracing::subscriber::set_global_default;
-use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer}; 
-use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
-use tracing_log::LogTracer;
-use secrecy::ExposeSecret;
+use sqlx::{postgres::PgPoolOptions};
+// use env_logger::Env;
+// use tracing::subscriber::set_global_default;
+// use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer}; 
+// use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
+// use tracing_log::LogTracer;
+// use secrecy::ExposeSecret;
 use zero2prod::email_client::EmailClient;
 
 /// Compose multiple layers into a `tracing`'s subscriber.
@@ -65,30 +66,42 @@ async fn main() -> std::io::Result<()> {
     // Panic if we can't read configuration
     let configuration = get_configuration().expect("Failed to read configuration."); 
 
-    let connection_pool = PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy_with(configuration.database.with_db());
-        // No longer async, given that we don't actually try to connect!
-        // .await
-        // .expect("Failed to create Postgres connection pool.");
+    // let server = build(configuration).await?;
 
-    // Build an 'EmailClient' using 'configuration'
-    let sender_email = configuration.email_client.sender()
-        .expect("Invalid sender email address.");
-    let email_client = EmailClient::new(
-        configuration.email_client.base_url,
-        sender_email, 
-        // Pass argument from configuration 
-        configuration.email_client.authorization_token,
-    );
+    let application = Application::build(configuration).await?;
+    application.run_until_stopped().await;
+    Ok(())
 
-    // OLD VERSION w/ PG Connection
-    // let connection = PgConnection::connect(&configuration.database.connection_string())
-    //     .await
-    //     .expect("Failed to connect to Postgres.");
+    // MOVED THIS ALL INTO STARTUP.RS
+    // let connection_pool = PgPoolOptions::new()
+    //     .acquire_timeout(std::time::Duration::from_secs(2))
+    //     .connect_lazy_with(configuration.database.with_db());
+    //     // No longer async, given that we don't actually try to connect!
+    //     // .await
+    //     // .expect("Failed to create Postgres connection pool.");
 
-    // We have removed the hard-coded `8000` - it's now coming from our settings!
-    let address = format!("{}:{}", configuration.application.host, configuration.application.port);
-    let listener = TcpListener::bind(address)?;
-    run(listener, connection_pool, email_client)?.await
+    // // Build an 'EmailClient' using 'configuration'
+    // let sender_email = configuration.email_client.sender()
+    //     .expect("Invalid sender email address.");
+
+    // let timeout = configuration.email_client.timeout();
+
+    // let email_client = EmailClient::new(
+    //     configuration.email_client.base_url,
+    //     sender_email, 
+    //     // Pass argument from configuration 
+    //     configuration.email_client.authorization_token,
+    //     // Pass new argument from configuration
+    //     timeout
+    // );
+
+    // // OLD VERSION w/ PG Connection
+    // // let connection = PgConnection::connect(&configuration.database.connection_string())
+    // //     .await
+    // //     .expect("Failed to connect to Postgres.");
+
+    // // We have removed the hard-coded `8000` - it's now coming from our settings!
+    // let address = format!("{}:{}", configuration.application.host, configuration.application.port);
+    // let listener = TcpListener::bind(address)?;
+    // run(listener, connection_pool, email_client)?.await
 }

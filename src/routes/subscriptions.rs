@@ -1,8 +1,8 @@
-use actix_web::{web, App, HttpResponse, HttpServer, guard::Connect};
-use sqlx::{PgConnection, PgPool};
+use actix_web::{web, HttpResponse};
+use sqlx::{ PgPool};
 use chrono::Utc;
 use uuid::Uuid;
-use tracing::{Instrument, Subscriber};
+// use tracing::{Instrument, Subscriber};
 use crate::domain::{SubscriberName, NewSubscriber, SubscriberEmail};
 // use crate::
 
