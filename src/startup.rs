@@ -1,7 +1,7 @@
 use actix_web::{web, App, HttpServer};
 use actix_web::dev::Server;
 use actix_web::web::Data;
-use core::time;
+// use core::time;
 // use std::async_iter;
 // use core::time;
 // use actix_web::middleware::Logger;
@@ -9,7 +9,7 @@ use std::net::TcpListener;
 use crate::routes::{health_check, subscribe};
 use sqlx::{PgPool};
 use tracing_actix_web::TracingLogger;
-use crate::email_client::{EmailClient, self};
+use crate::email_client::{EmailClient};
 use crate::configuration::{Settings, DatabaseSettings};
 use sqlx::postgres::PgPoolOptions;
 

@@ -1,18 +1,18 @@
 // use actix_web::{web, App, HttpRequest, HttpServer, Responder, HttpResponse};
 // use std::fmt::format;
-use std::net::TcpListener;
-use actix_web::App;
-use zero2prod::startup::{run, Application};
+// use std::net::TcpListener;
+// use actix_web::App;
+use zero2prod::startup::{Application};
 use zero2prod::configuration::get_configuration;
 use zero2prod::telemetry::{get_subscriber, init_subscriber};
-use sqlx::{postgres::PgPoolOptions};
+// use sqlx::{postgres::PgPoolOptions};
 // use env_logger::Env;
 // use tracing::subscriber::set_global_default;
 // use tracing_bunyan_formatter::{BunyanFormattingLayer, JsonStorageLayer}; 
 // use tracing_subscriber::{layer::SubscriberExt, EnvFilter, Registry};
 // use tracing_log::LogTracer;
 // use secrecy::ExposeSecret;
-use zero2prod::email_client::EmailClient;
+// use zero2prod::email_client::EmailClient;
 
 /// Compose multiple layers into a `tracing`'s subscriber.
 ///
