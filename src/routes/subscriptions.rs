@@ -134,10 +134,8 @@ pub async fn subscribe(
 
     // match -- ELIMINATING THIS AFTER ALL 
         sqlx::query!(
-        r#"
-        INSERT INTO subscriptions (id, email, name, subscribed_at, status)
-        VALUES ($1, $2, $3, $4, 'confirmed')
-        "#,
+        r#"INSERT INTO subscriptions (id, email, name, subscribed_at)
+        VALUES ($1, $2, $3, $4)"#,
         Uuid::new_v4(),
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
