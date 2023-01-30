@@ -139,8 +139,9 @@ pub async fn subscribe(
         Uuid::new_v4(),
         new_subscriber.email.as_ref(),
         new_subscriber.name.as_ref(),
-        Utc::now(),
+        Utc::now()
     )
+    
     // We use "get_ref" to get an immutable reference to the `PgConnection`
     // wrapped by `web::Data`.
 
