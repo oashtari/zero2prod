@@ -83,7 +83,7 @@ pub async fn subscribe(
 #[tracing::instrument(
     name = "Saving new subscriber details in the database", 
     skip(new_subscriber, pool)
-    )]
+)]
     
     // // ADDED TRACING INSTRUMENT TO GET RID OF QUERY SPAN
     // // Let's generate a random unique identifier 
@@ -126,7 +126,7 @@ pub async fn subscribe(
     //     "Saving new subscriber details in the database"
     // );
 
-    pub async fn insert_subscriber(
+pub async fn insert_subscriber(
         pool: &PgPool,
         // form: &FormData,
         new_subscriber: &NewSubscriber,
