@@ -4,7 +4,8 @@ use chrono::Utc;
 use uuid::Uuid;
 // use tracing::{Instrument, Subscriber};
 use crate::domain::{SubscriberName, NewSubscriber, SubscriberEmail};
-// use crate::
+use crate::email_client::{EmailClient, self};
+
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -31,7 +32,7 @@ impl TryFrom<FormData> for NewSubscriber {
 
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(form, pool),
+    skip(form, pool, email_client),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
@@ -43,6 +44,7 @@ pub async fn subscribe(
     // OLD VERSION w/ PG Connection
     // Retrieving a connection from the application state! 
     // connection: web::Data<PgConnection>,
+    email_client: web::Data<EmailClient>,
 ) -> HttpResponse {
 
     // THIS IS NOW ALL DONE ABOVE IN THE parse_subscriber HELPER FUNCTION
@@ -72,11 +74,40 @@ pub async fn subscribe(
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
-    match insert_subscriber(&pool, &new_subscriber).await
-    {
-        Ok(_) => HttpResponse::Ok().finish(),
-        Err(_) => HttpResponse::InternalServerError().finish() 
+    // BEFORE ADDING PSEUDO EMAIL CLIENT
+    // match insert_subscriber(&pool, &new_subscriber).await
+    // {
+    //     Ok(_) => HttpResponse::Ok().finish(),
+    //     Err(_) => HttpResponse::InternalServerError().finish() 
+    // }
+
+    if insert_subscriber(&pool, &new_subscriber).await.is_err() {
+        return HttpResponse::InternalServerError().finish();
     }
+
+    let confirmation_link = "https://my-api.com/subscriptions/confirm";
+    // Send a (useless) email to the new subscriber.
+    // We are ignoring email delivery errors for now.
+    if email_client
+        .send_email(
+            new_subscriber.email, 
+            "Welcome", 
+            &format!(
+                "Welcome to our newsletter!<br />\
+                Click <a href=\"{}\">here</a> to confirm your subscription.",
+                confirmation_link
+            ), 
+            &format!(
+                "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
+                confirmation_link
+            ),
+        )
+        .await
+        .is_err() {
+            return HttpResponse::InternalServerError().finish();
+        }
+
+        HttpResponse::Ok().finish()
 }
 
 
