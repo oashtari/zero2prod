@@ -12,6 +12,8 @@ use tracing_actix_web::TracingLogger;
 use crate::email_client::{EmailClient};
 use crate::configuration::{Settings, DatabaseSettings};
 use sqlx::postgres::PgPoolOptions;
+use crate::routes::confirm;
+
 
                 // MOVED INSIDE impl Application
                 // pub async fn build(configuration: &Settings) -> Result<Server, std::io::Error> {
@@ -66,6 +68,7 @@ pub fn run(listener: TcpListener, db_pool: PgPool, email_client: EmailClient) ->
             // .wrap(Logger::default())
             .route("/health_check", web::get().to(health_check))
             .route("/subscriptions", web::post().to(subscribe))
+            .route("/subscriptions/confirm", web::get().to(confirm))
             // Register the connection as part of the application state 
             // Get a pointer copy and attach it to the application state
             .app_data(db_pool.clone())
