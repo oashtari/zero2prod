@@ -1,11 +1,11 @@
-use actix_web::{web, HttpResponse};
+use actix_web::{web, HttpResponse, App};
 use sqlx::{ PgPool};
 use chrono::Utc;
 use uuid::Uuid;
 // use tracing::{Instrument, Subscriber};
 use crate::domain::{SubscriberName, NewSubscriber, SubscriberEmail};
 use crate::email_client::{EmailClient, self};
-
+use crate::startup::ApplicationBaseUrl;
 
 #[derive(serde::Deserialize)]
 pub struct FormData {
@@ -32,7 +32,7 @@ impl TryFrom<FormData> for NewSubscriber {
 
 #[tracing::instrument(
     name = "Adding a new subscriber",
-    skip(form, pool, email_client),
+    skip(form, pool, email_client, base_url),
     fields(
         subscriber_email = %form.email,
         subscriber_name = %form.name
@@ -45,6 +45,7 @@ pub async fn subscribe(
     // Retrieving a connection from the application state! 
     // connection: web::Data<PgConnection>,
     email_client: web::Data<EmailClient>,
+    base_url: web::Data<ApplicationBaseUrl>
 ) -> HttpResponse {
 
     // THIS IS NOW ALL DONE ABOVE IN THE parse_subscriber HELPER FUNCTION
@@ -85,20 +86,22 @@ pub async fn subscribe(
         return HttpResponse::InternalServerError().finish();
     }
 
-    if send_confirmation_email(&email_client, new_subscriber).await.is_err() {
+    if send_confirmation_email(&email_client, new_subscriber, &base_url.0).await.is_err() {
         return HttpResponse::InternalServerError().finish();
     }
 
     #[tracing::instrument(
         name = "Send a confirmation email to a new subscriber", 
-        skip(email_client, new_subscriber)
+        skip(email_client, new_subscriber, base_url)
     )]
 
     pub async fn send_confirmation_email(
         email_client: &EmailClient,
         new_subscriber: NewSubscriber,
+        base_url: &str,
     ) -> Result<(), reqwest::Error> {
-        let confirmation_link = "https://my-api.com/subscriptions/confirm";
+        // Build a confirmation link with a dynamic root
+        let confirmation_link = format!("{}/subscriptions/confirm?subscription_token=mytoken", base_url);
         let plain_body = format!(
             "Welcome to our newsletter!\nVisit {} to confirm your subscription.",
             confirmation_link
