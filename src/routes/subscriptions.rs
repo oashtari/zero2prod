@@ -8,7 +8,7 @@ use crate::email_client::{EmailClient, self};
 use crate::startup::ApplicationBaseUrl;
 use rand::distributions::Alphanumeric;
 use rand::{thread_rng, Rng};
-
+use sqlx::{Postgres, Transaction};
 
 /// Generate a random 25-characters-long case-sensitive subscription token.
 fn generate_subscription_token() -> String {
@@ -87,6 +87,11 @@ pub async fn subscribe(
         Err(_) => return HttpResponse::BadRequest().finish(),
     };
 
+    let mut transaction = match pool.begin().await {
+        Ok(transaction) => transaction,
+        Err(_) => return HttpResponse::InternalServerError().finish(),
+    };
+
         // // BEFORE ADDING PSEUDO EMAIL CLIENT
         // // match insert_subscriber(&pool, &new_subscriber).await
         // // {
@@ -99,14 +104,18 @@ pub async fn subscribe(
         // }
 
 
-    let subscriber_id = match insert_subscriber(&pool, &new_subscriber).await {
+    let subscriber_id = match insert_subscriber(&mut transaction, &new_subscriber).await {
         Ok(subscriber_id) => subscriber_id,
         Err(_) => return HttpResponse::InternalServerError().finish()
     };
 
     let subscription_token = generate_subscription_token();
-    if store_token(&pool, subscriber_id, &subscription_token).await.is_err() {
+    if store_token(&mut transaction, subscriber_id, &subscription_token).await.is_err() {
         return HttpResponse::InternalServerError().finish()
+    }
+
+    if transaction.commit().await.is_err() {
+        return HttpResponse::InternalServerError().finish();
     }
 
     if send_confirmation_email(&email_client, new_subscriber, &base_url.0, &subscription_token).await.is_err() {
@@ -114,12 +123,15 @@ pub async fn subscribe(
     }
     HttpResponse::Ok().finish()
 }
+
+
+
 #[tracing::instrument(
     name = "Store subscription token in the database", 
-    skip(subscription_token, pool)
+    skip(subscription_token, transaction)
 )]
 pub async fn store_token(
-    pool: &PgPool,
+    transaction: &mut Transaction<'_, Postgres>,
     subscriber_id: Uuid,
     subscription_token: &str,
 ) -> Result<(), sqlx::Error> {
@@ -129,7 +141,7 @@ pub async fn store_token(
         subscription_token,
         subscriber_id
     )
-    .execute(pool)
+    .execute(transaction)
     .await
     .map_err(|e| {
         tracing::error!("Failed to execute query: {:?}",e);
@@ -192,7 +204,7 @@ pub async fn send_confirmation_email(
 
 #[tracing::instrument(
     name = "Saving new subscriber details in the database", 
-    skip(new_subscriber, pool)
+    skip(new_subscriber, transaction)
 )]
     
     // // ADDED TRACING INSTRUMENT TO GET RID OF QUERY SPAN
@@ -237,7 +249,7 @@ pub async fn send_confirmation_email(
     // );
 
 pub async fn insert_subscriber(
-        pool: &PgPool,
+        transaction: &mut Transaction<'_, Postgres>,
         // form: &FormData,
         new_subscriber: &NewSubscriber,
     ) -> Result<Uuid, sqlx::Error> {
@@ -258,7 +270,7 @@ pub async fn insert_subscriber(
     // wrapped by `web::Data`.
 
     // Using the pool as a drop-in replacement
-    .execute(pool)
+    .execute(transaction)
     // First we attach the instrumentation, then we `.await` it
     // .instrument(query_span) // error introduced in chapter 5
     .await
