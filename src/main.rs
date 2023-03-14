@@ -64,7 +64,7 @@ async fn main() -> std::io::Result<()> {
 
 
     // Panic if we can't read configuration
-    let configuration = get_configuration().expect("Failed to read configuration."); 
+    let configuration = get_configuration().expect("Failed to read configuration. MAIN"); 
 
     // let server = build(configuration).await?;
 

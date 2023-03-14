@@ -101,7 +101,7 @@ pub async fn spawn_app() -> TestApp {
     let email_server = MockServer::start().await;
     // Randomize configuration to ensure test isolation
     let configuration = {
-        let mut c = get_configuration().expect("Failed to read configuration.");
+        let mut c = get_configuration().expect("Failed to read configuration.HELPERS");
 
         // Use different database for each test case
         c.database.database_name = Uuid::new_v4().to_string();

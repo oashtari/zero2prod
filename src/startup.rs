@@ -6,13 +6,12 @@ use actix_web::web::Data;
 // use core::time;
 // use actix_web::middleware::Logger;
 use std::net::TcpListener;
-use crate::routes::{health_check, subscribe};
+use crate::routes::{health_check, subscribe, confirm};
 use sqlx::{PgPool};
 use tracing_actix_web::TracingLogger;
 use crate::email_client::{EmailClient};
 use crate::configuration::{Settings, DatabaseSettings};
 use sqlx::postgres::PgPoolOptions;
-use crate::routes::confirm;
 
 
                 // MOVED INSIDE impl Application
@@ -49,45 +48,6 @@ use crate::routes::confirm;
                 //     run(listener, connection_pool, email_client)
                 // }
 
-pub fn run(listener: TcpListener, db_pool: PgPool, email_client: EmailClient, base_url: String) -> Result<Server, std::io::Error> {
-
-    // Wrap the pool using web::Data, which boils down to an Arc smart pointer 
-    let db_pool = web::Data::new(db_pool);
-
-    let email_client = Data::new(email_client);
-
-    let base_url = Data::new(ApplicationBaseUrl(base_url));
-
-    // OLD VERSION w/ PG connection
-    // Wrap the connection in a smart pointer
-    // let connection = web::Data::new(connection);
-    // capture connection from the surrounding environment
-    let server = HttpServer::new( move || {
-        App::new()
-            // Instead of `Logger::default`
-            .wrap(TracingLogger::default())
-            // // Middlewares are added using the `wrap` method on `App`
-            // .wrap(Logger::default())
-            .route("/health_check", web::get().to(health_check))
-            .route("/subscriptions", web::post().to(subscribe))
-            .route("/subscriptions/confirm", web::get().to(confirm))
-            // Register the connection as part of the application state 
-            // Get a pointer copy and attach it to the application state
-            .app_data(db_pool.clone())
-            .app_data(email_client.clone())
-            .app_data(base_url.clone())
-    })
-    .listen(listener)?
-    .run();
-    
-    Ok(server)
-}
-
-pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
-    PgPoolOptions::new()
-        .acquire_timeout(std::time::Duration::from_secs(2))
-        .connect_lazy_with(configuration.with_db())
-}
 
 pub struct Application {
     port: u16,
@@ -147,7 +107,51 @@ impl Application {
     }
 }
 
+pub fn get_connection_pool(configuration: &DatabaseSettings) -> PgPool {
+    PgPoolOptions::new()
+        .acquire_timeout(std::time::Duration::from_secs(2))
+        .connect_lazy_with(configuration.with_db())
+}
+
 // We need to define a wrapper type in order to retrieve the URL in the `subscribe` handler.
 // Retrieval from the context, in actix-web, is type-based: using a raw `String` would expose us to conflicts.
 pub struct ApplicationBaseUrl(pub String);
+
+
+fn run(listener: TcpListener, db_pool: PgPool, email_client: EmailClient, base_url: String) -> Result<Server, std::io::Error> {
+
+    // Wrap the pool using web::Data, which boils down to an Arc smart pointer 
+    let db_pool = web::Data::new(db_pool);
+
+    let email_client = Data::new(email_client);
+
+    let base_url = Data::new(ApplicationBaseUrl(base_url));
+
+    // OLD VERSION w/ PG connection
+    // Wrap the connection in a smart pointer
+    // let connection = web::Data::new(connection);
+    // capture connection from the surrounding environment
+    let server = HttpServer::new( move || {
+        App::new()
+            // Instead of `Logger::default`
+            .wrap(TracingLogger::default())
+            // // Middlewares are added using the `wrap` method on `App`
+            // .wrap(Logger::default())
+            .route("/health_check", web::get().to(health_check))
+            .route("/subscriptions", web::post().to(subscribe))
+            .route("/subscriptions/confirm", web::get().to(confirm))
+            // Register the connection as part of the application state 
+            // Get a pointer copy and attach it to the application state
+            .app_data(db_pool.clone())
+            .app_data(email_client.clone())
+            .app_data(base_url.clone())
+    })
+    .listen(listener)?
+    .run();
+    
+    Ok(server)
+}
+
+
+
 

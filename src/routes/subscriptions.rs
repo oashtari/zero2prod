@@ -50,6 +50,8 @@ impl TryFrom<FormData> for NewSubscriber {
         subscriber_name = %form.name
     )
 )]
+
+
 pub async fn subscribe(
     form: web::Form<FormData>,
     pool: web::Data<PgPool>, // renamed
