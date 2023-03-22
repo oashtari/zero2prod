@@ -48,7 +48,7 @@ mod tests {
         assert_err!(SubscriberEmail::parse(email));
     }
 
-    #[derive(Debug, Clone, rand::RngCore)]
+    #[derive(Debug, Clone)]
     struct ValidEmailFixture(pub String);
 
     impl quickcheck::Arbitrary for ValidEmailFixture {
