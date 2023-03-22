@@ -1,4 +1,5 @@
 use validator::validate_email;
+use rand::RngCore;
 // use fake::faker::internet::en::SafeEmail;
 // use fake::faker::internet::en::SafeEmail;
 // use fake::Fake;
@@ -29,7 +30,25 @@ mod tests {
     use fake::faker::internet::en::SafeEmail;
     use fake::Fake;
 
-    #[derive(Debug, Clone)]
+    #[test]
+    fn empty_string_is_rejected() {
+        let email = "".to_string();
+        assert_err!(SubscriberEmail::parse(email)); 
+    }
+
+    #[test]
+    fn email_missing_at_symbol_is_rejected() {
+        let email = "ursuladomain.com".to_string();
+        assert_err!(SubscriberEmail::parse(email)); 
+    }
+
+    #[test]
+    fn email_missing_subject_is_rejected() {
+        let email = "@domain.com".to_string(); 
+        assert_err!(SubscriberEmail::parse(email));
+    }
+
+    #[derive(Debug, Clone, rand::RngCore)]
     struct ValidEmailFixture(pub String);
 
     impl quickcheck::Arbitrary for ValidEmailFixture {
@@ -44,27 +63,12 @@ mod tests {
         SubscriberEmail::parse(valid_email.0).is_ok()
     }
 
-    #[test]
-    fn empty_string_is_rejected() {
-        let email = "".to_string();
-        assert_err!(SubscriberEmail::parse(email)); 
-    }
     
-    #[test]
-    fn email_missing_at_symbol_is_rejected() {
-        let email = "ursuladomain.com".to_string();
-        assert_err!(SubscriberEmail::parse(email)); 
-    }
 
-    #[test]
-    fn email_missing_subject_is_rejected() {
-        let email = "@domain.com".to_string(); 
-        assert_err!(SubscriberEmail::parse(email));
-    }
 
-    #[test]
-    fn valid_emails_are_parsed_successfully() {
-        let email = SafeEmail().fake();
-        claim::assert_ok!(SubscriberEmail::parse(email)); 
-    }
+    // #[test]
+    // fn valid_emails_are_parsed_successfully() {
+    //     let email = SafeEmail().fake();
+    //     claim::assert_ok!(SubscriberEmail::parse(email)); 
+    // }
 }

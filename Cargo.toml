@@ -30,7 +30,7 @@ serde-aux = "3"
 unicode-segmentation = "1"
 validator="0.15.0"
 # We need the `std_rng` to get access to the PRNG we want
-rand = { version = "0.8", features=["std_rng"] }
+rand = { version = "0.8.5", features=["std_rng"] }
 
 
 [dependencies.reqwest]
